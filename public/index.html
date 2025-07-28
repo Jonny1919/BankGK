@@ -25,9 +25,9 @@
           gallery.appendChild(img);
         });
       })
-      .catch(err => {
-        document.getElementById("gallery").innerText = "Fehler beim Laden: " + err;
-      });
+    .catch(err => {
+      document.getElementById("gallery").innerText = "Fehler beim Laden: " + err.message;
+    });
   </script>
 </body>
 </html>
