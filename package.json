@@ -1,4 +1,13 @@
-"dependencies": {
-  "node-fetch": "^2.6.7",
-  "form-data": "^4.0.0"
+{
+  "name": "netlify-cloudinary-functions",
+  "version": "1.0.0",
+  "description": "Netlify Functions for Cloudinary image upload and fetch",
+  "main": "index.js",
+  "scripts": {},
+  "dependencies": {
+    "node-fetch": "^2.6.7",
+    "form-data": "^4.0.0"
+  },
+  "author": "",
+  "license": "MIT"
 }
