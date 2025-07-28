@@ -2,10 +2,32 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8" />
-  <title>Netlify Test</title>
+  <title>Galerie</title>
+  <style>
+    body { font-family: sans-serif; margin: 2rem; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; }
+    img { width: 100%; border-radius: 8px; }
+  </style>
 </head>
 <body>
-  <h1>Willkommen</h1>
-  <p><a href="/.netlify/functions/hello">Function testen</a></p>
+  <h1>📸 Galerie</h1>
+  <div id="gallery" class="grid">Lade Bilder...</div>
+
+  <script>
+    fetch("/.netlify/functions/get-cloudinary-images")
+      .then((res) => res.json())
+      .then((urls) => {
+        const gallery = document.getElementById("gallery");
+        gallery.innerHTML = "";
+        urls.forEach(url => {
+          const img = document.createElement("img");
+          img.src = url;
+          gallery.appendChild(img);
+        });
+      })
+      .catch(err => {
+        document.getElementById("gallery").innerText = "Fehler beim Laden: " + err;
+      });
+  </script>
 </body>
 </html>
