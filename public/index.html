@@ -1,33 +1,22 @@
-<!DOCTYPE html>
-<html lang="de">
-<head>
-  <meta charset="UTF-8" />
-  <title>Galerie</title>
-  <style>
-    body { font-family: sans-serif; margin: 2rem; }
-    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; }
-    img { width: 100%; border-radius: 8px; }
-  </style>
-</head>
-<body>
-  <h1>📸 Galerie</h1>
-  <div id="gallery" class="grid">Lade Bilder...</div>
+fetch("/.netlify/functions/get-cloudinary-images")
+  .then((res) => res.json())
+  .then((urls) => {
+    const gallery = document.getElementById("gallery");
+    gallery.innerHTML = "";
 
-  <script>
-    fetch("/.netlify/functions/get-cloudinary-images")
-      .then((res) => res.json())
-      .then((urls) => {
-        const gallery = document.getElementById("gallery");
-        gallery.innerHTML = "";
-        urls.forEach(url => {
-          const img = document.createElement("img");
-          img.src = url;
-          gallery.appendChild(img);
-        });
-      })
-    .catch(err => {
-      document.getElementById("gallery").innerText = "Fehler beim Laden: " + err.message;
-    });
-  </script>
-</body>
-</html>
+    if (Array.isArray(urls)) {
+      urls.forEach((url) => {
+        const img = document.createElement("img");
+        img.src = url;
+        gallery.appendChild(img);
+      });
+    } else if (urls.error) {
+      gallery.innerText = "Fehler vom Server: " + urls.error;
+    } else {
+      gallery.innerText = "Unerwartete Antwort vom Server.";
+    }
+  })
+  .catch((err) => {
+    document.getElementById("gallery").innerText =
+      "Fehler beim Laden: " + err.message;
+  });
