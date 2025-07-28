@@ -17,7 +17,8 @@ exports.handler = async () => {
     if (!res.ok) {
       return {
         statusCode: res.status,
-        body: "Fehler beim Abrufen der Bilder",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ error: "Fehler beim Abrufen der Bilder" }),
       };
     }
 
@@ -32,7 +33,8 @@ exports.handler = async () => {
   } catch (err) {
     return {
       statusCode: 500,
-      body: `Serverfehler: ${err}`,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ error: err.toString() }),
     };
   }
 };
