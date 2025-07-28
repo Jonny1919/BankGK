@@ -1,3 +1,5 @@
+const fetch = require("node-fetch");
+
 exports.handler = async () => {
   const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
   const apiKey = process.env.CLOUDINARY_API_KEY;
@@ -14,11 +16,16 @@ exports.handler = async () => {
       },
     });
 
+    if (!res.ok) {
+      return {
+        statusCode: res.status,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ error: "Fehler beim Abrufen der Bilder" }),
+      };
+    }
+
     const data = await res.json();
 
-    console.log("Cloudinary API Response:", data);
-
-    // Rückgabe der kompletten Antwort zu Debug-Zwecken
     return {
       statusCode: 200,
       headers: { "Content-Type": "application/json" },
