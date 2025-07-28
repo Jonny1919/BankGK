@@ -23,7 +23,11 @@ exports.handler = async () => {
     }
 
     const data = await res.json();
-    const urls = data.resources.map((r) => r.secure_url);
+
+    // Sicherstellen, dass resources vorhanden sind und ein Array ist
+    const urls = Array.isArray(data.resources)
+      ? data.resources.map((r) => r.secure_url)
+      : [];
 
     return {
       statusCode: 200,
