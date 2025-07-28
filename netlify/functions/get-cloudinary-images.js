@@ -14,25 +14,15 @@ exports.handler = async () => {
       },
     });
 
-    if (!res.ok) {
-      return {
-        statusCode: res.status,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ error: "Fehler beim Abrufen der Bilder" }),
-      };
-    }
-
     const data = await res.json();
 
-    // Sicherstellen, dass resources vorhanden sind und ein Array ist
-    const urls = Array.isArray(data.resources)
-      ? data.resources.map((r) => r.secure_url)
-      : [];
+    console.log("Cloudinary API Response:", data);
 
+    // Rückgabe der kompletten Antwort zu Debug-Zwecken
     return {
       statusCode: 200,
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(urls),
+      body: JSON.stringify(data),
     };
   } catch (err) {
     return {
