@@ -1,3 +1,13 @@
+exports.handler = async () => {
+  console.log("get-cloudinary-images function gestartet");
+
+  const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+  const apiKey = process.env.CLOUDINARY_API_KEY;
+  const apiSecret = process.env.CLOUDINARY_API_SECRET;
+
+  console.log("Cloud Name:", cloudName);
+  console.log("API Key vorhanden?", !!apiKey);
+  console.log("API Secret vorhanden?", !!apiSecret);
 const fetch = require("node-fetch");
 
 exports.handler = async () => {
