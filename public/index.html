@@ -28,17 +28,17 @@
 
         gallery.innerHTML = "";
 
-        if (Array.isArray(data)) {
-          data.forEach(url => {
-            const image = document.createElement("img");
-            image.src = url;
-            gallery.appendChild(image);
-          });
-        } else if (data.error) {
-          gallery.innerText = "Fehler vom Server: " + data.error;
-        } else {
-          gallery.innerText = "Unerwartete Antwort vom Server.";
-        }
+      if (Array.isArray(data)) {
+        data.forEach(url => {
+          const image = document.createElement("img");
+          image.src = url;
+          gallery.appendChild(image);
+        });
+      } else if (data.error) {
+        gallery.innerText = "Fehler vom Server: " + data.error;
+      } else {
+        gallery.innerText = "Unerwartete Antwort vom Server.";
+      }
 
     async function uploadImage() {
       const input = document.getElementById("fileInput");
