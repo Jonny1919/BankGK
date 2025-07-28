@@ -5,18 +5,18 @@
   <title>Galerie & Upload</title>
   <style>
     body { font-family: sans-serif; margin: 2rem; }
-    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px,1fr)); gap: 1rem; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px,1fr)); gap: 1rem; margin-top: 1rem; }
     img { width: 100%; border-radius: 8px; }
   </style>
 </head>
 <body>
-  <h1>📸 Galerie</h1>
-  <div id="gallery" class="grid">Lade Bilder...</div>
-
-  <h2>📤 Bild hochladen</h2>
+  <h1>📤 Bild hochladen</h1>
   <input type="file" id="fileInput" accept="image/*" />
   <button id="uploadBtn">Hochladen</button>
   <p id="uploadStatus"></p>
+
+  <h2>📸 Galerie</h2>
+  <div id="gallery" class="grid">Lade Bilder...</div>
 
   <script>
     async function loadGallery() {
