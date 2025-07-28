@@ -1,22 +1,92 @@
-fetch("/.netlify/functions/get-cloudinary-images")
-  .then(res => res.json())
-  .then(data => {
-    const gallery = document.getElementById("gallery");
-    gallery.innerHTML = "";
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <title>Galerie & Upload</title>
+  <style>
+    body { font-family: sans-serif; margin: 2rem; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px,1fr)); gap: 1rem; }
+    img { width: 100%; border-radius: 8px; }
+  </style>
+</head>
+<body>
+  <h1>📸 Galerie</h1>
+  <div id="gallery" class="grid">Lade Bilder...</div>
 
-    if (data.resources && Array.isArray(data.resources)) {
-      data.resources.forEach(img => {
-        const image = document.createElement("img");
-        image.src = img.secure_url;
-        gallery.appendChild(image);
-      });
-    } else if (data.error) {
-      gallery.innerText = "Fehler vom Server: " + data.error;
-    } else {
-      gallery.innerText = "Unerwartete Antwort vom Server.";
+  <h2>📤 Bild hochladen</h2>
+  <input type="file" id="fileInput" accept="image/*" />
+  <button id="uploadBtn">Hochladen</button>
+  <p id="uploadStatus"></p>
+
+  <script>
+    async function loadGallery() {
+      const gallery = document.getElementById("gallery");
+      gallery.innerHTML = "Lade Bilder...";
+      try {
+        const res = await fetch("/.netlify/functions/get-cloudinary-images");
+        const data = await res.json();
+
+        gallery.innerHTML = "";
+
+        if (data.resources && Array.isArray(data.resources)) {
+          data.resources.forEach(img => {
+            const image = document.createElement("img");
+            image.src = img.secure_url;
+            gallery.appendChild(image);
+          });
+        } else if (data.error) {
+          gallery.innerText = "Fehler vom Server: " + data.error;
+        } else {
+          gallery.innerText = "Unerwartete Antwort vom Server.";
+        }
+      } catch (err) {
+        gallery.innerText = "Fehler beim Laden: " + err.message;
+      }
     }
-  })
-  .catch(err => {
-    document.getElementById("gallery").innerText =
-      "Fehler beim Laden: " + err.message;
-  });
+
+    async function uploadImage() {
+      const input = document.getElementById("fileInput");
+      const status = document.getElementById("uploadStatus");
+
+      if (!input.files.length) {
+        status.innerText = "Bitte erst eine Datei auswählen.";
+        return;
+      }
+
+      const file = input.files[0];
+      status.innerText = "Lade hoch...";
+
+      const reader = new FileReader();
+      reader.onload = async function () {
+        const base64 = reader.result;
+
+        try {
+          const res = await fetch("/.netlify/functions/upload-image", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ imageBase64: base64 }),
+          });
+
+          const data = await res.json();
+
+          if (res.ok) {
+            status.innerText = "Upload erfolgreich!";
+            input.value = "";
+            loadGallery(); // Galerie neu laden
+          } else {
+            status.innerText = "Upload fehlgeschlagen: " + (data.error || "Unbekannter Fehler");
+          }
+        } catch (err) {
+          status.innerText = "Fehler beim Upload: " + err.message;
+        }
+      };
+
+      reader.readAsDataURL(file);
+    }
+
+    document.getElementById("uploadBtn").addEventListener("click", uploadImage);
+
+    loadGallery();
+  </script>
+</body>
+</html>
