@@ -1,22 +1,22 @@
 fetch("/.netlify/functions/get-cloudinary-images")
-  .then((res) => res.json())
-  .then((urls) => {
+  .then(res => res.json())
+  .then(data => {
     const gallery = document.getElementById("gallery");
     gallery.innerHTML = "";
 
-    if (Array.isArray(urls)) {
-      urls.forEach((url) => {
-        const img = document.createElement("img");
-        img.src = url;
-        gallery.appendChild(img);
+    if (data.resources && Array.isArray(data.resources)) {
+      data.resources.forEach(img => {
+        const image = document.createElement("img");
+        image.src = img.secure_url;
+        gallery.appendChild(image);
       });
-    } else if (urls.error) {
-      gallery.innerText = "Fehler vom Server: " + urls.error;
+    } else if (data.error) {
+      gallery.innerText = "Fehler vom Server: " + data.error;
     } else {
       gallery.innerText = "Unerwartete Antwort vom Server.";
     }
   })
-  .catch((err) => {
+  .catch(err => {
     document.getElementById("gallery").innerText =
       "Fehler beim Laden: " + err.message;
   });
