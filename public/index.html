@@ -2,21 +2,111 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Galerie & Upload</title>
   <style>
-    body { font-family: sans-serif; margin: 2rem; }
-    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px,1fr)); gap: 1rem; margin-top: 1rem; }
-    img { width: 100%; border-radius: 8px; }
+    body {
+      font-family: sans-serif;
+      margin: 0;
+      background: #f5f5f5;
+      color: #333;
+    }
+    h1, h2 {
+      text-align: center;
+      margin-top: 1rem;
+    }
+    /* Masonry Layout */
+    .gallery {
+      column-count: 3;
+      column-gap: 0;
+      padding: 10px;
+    }
+    @media (max-width: 900px) {
+      .gallery { column-count: 2; }
+    }
+    @media (max-width: 600px) {
+      .gallery { column-count: 1; }
+    }
+    .gallery img {
+      width: 100% !important;
+      height: auto;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: transform 0.3s ease;
+      display: block;
+    }
+    .gallery img:hover {
+      transform: scale(1.03);
+    }
+
+    /* Lightbox */
+    .lightbox {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      background: rgba(0,0,0,0.9);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+    .lightbox img {
+      max-width: 90%;
+      max-height: 90%;
+    }
+    .lightbox .close {
+      position: absolute;
+      top: 20px;
+      right: 30px;
+      color: white;
+      font-size: 30px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    /* Upload Box */
+    .upload-container {
+      background: white;
+      padding: 1rem;
+      margin: 1rem auto;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      max-width: 500px;
+      text-align: center;
+    }
+    button {
+      background: #007BFF;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      margin-top: 10px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #0056b3;
+    }
   </style>
 </head>
 <body>
-  <h1>📤 Bild hochladen</h1>
-  <input type="file" id="fileInput" accept="image/*" />
-  <button id="uploadBtn">Hochladen</button>
-  <p id="uploadStatus"></p>
 
-  <h2>📸 Galerie</h2>
-  <div id="gallery" class="grid">Lade Bilder...</div>
+  <div class="upload-container">
+    <h2>📤 Bild hochladen</h2>
+    <input type="file" id="fileInput" accept="image/*" />
+    <br />
+    <button id="uploadBtn">Hochladen</button>
+    <p id="uploadStatus"></p>
+  </div>
+
+  <h1>📸 Galerie</h1>
+  <div id="gallery" class="gallery">Lade Bilder...</div>
+
+  <!-- Lightbox -->
+  <div id="lightbox" class="lightbox">
+    <span class="close">&times;</span>
+    <img id="lightboxImg" src="" alt="Großansicht" />
+  </div>
 
   <script>
     async function loadGallery() {
@@ -32,6 +122,8 @@
           data.forEach(url => {
             const image = document.createElement("img");
             image.src = url;
+            image.loading = "lazy"; // Lazy Loading
+            image.addEventListener("click", () => openLightbox(url));
             gallery.appendChild(image);
           });
         } else if (data.error) {
@@ -72,7 +164,7 @@
           if (res.ok) {
             status.innerText = "Upload erfolgreich!";
             input.value = "";
-            loadGallery(); // Galerie neu laden
+            loadGallery();
           } else {
             status.innerText = "Upload fehlgeschlagen: " + (data.error || "Unbekannter Fehler");
           }
@@ -83,6 +175,25 @@
 
       reader.readAsDataURL(file);
     }
+
+    // Lightbox Funktionen
+    function openLightbox(url) {
+      const lightbox = document.getElementById("lightbox");
+      const lightboxImg = document.getElementById("lightboxImg");
+      lightboxImg.src = url;
+      lightbox.style.display = "flex";
+    }
+    function closeLightbox() {
+      document.getElementById("lightbox").style.display = "none";
+    }
+
+    document.querySelector(".close").addEventListener("click", closeLightbox);
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") closeLightbox();
+    });
+    document.getElementById("lightbox").addEventListener("click", (e) => {
+      if (e.target.id === "lightbox") closeLightbox();
+    });
 
     document.getElementById("uploadBtn").addEventListener("click", uploadImage);
 
