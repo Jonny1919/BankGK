@@ -18,27 +18,33 @@ exports.handler = async function(event) {
       };
     }
 
-    // Base64 Länge loggen statt ganzen Inhalt
-    console.log("Payload Size:", body.imageBase64.length);
+    console.log("Function Payload:", body);
 
-    // Dateiendung aus dem Dateinamen extrahieren
-    const match = body.filename.match(/\.(jpg|jpeg|png)$/i);
-    const ext = match ? match[1].toLowerCase() : "jpg"; // default jpg
+    // Dateiendung prüfen
+    const ext = body.filename.split('.').pop().toLowerCase();
+    if (!["jpg", "jpeg", "png"].includes(ext)) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ error: "Nur jpg/jpeg/png erlaubt" }),
+      };
+    }
 
-    console.log("Vor Cloudinary Upload");
-    const uploadResult = await cloudinary.uploader.upload(
-      `data:image/${ext};base64,${body.imageBase64}`,
-      {
-        folder: "Galerie",
-        public_id: body.filename.replace(/\.[^/.]+$/, ""), // ohne Dateiendung
-      }
-    );
-    console.log("Nach Cloudinary Upload:", uploadResult.secure_url);
+    // Data URI für Cloudinary
+    const dataUri = `data:image/${ext};base64,${body.imageBase64}`;
+
+    // Upload zu Cloudinary
+    const uploadResult = await cloudinary.uploader.upload(dataUri, {
+      folder: "Galerie",
+      public_id: body.filename.replace(/\.[^/.]+$/, ""), // ohne Endung
+    });
+
+    console.log("Cloudinary Result:", uploadResult);
 
     return {
       statusCode: 200,
       body: JSON.stringify({ url: uploadResult.secure_url }),
     };
+
   } catch (err) {
     console.error("Upload Error:", err);
     return {
