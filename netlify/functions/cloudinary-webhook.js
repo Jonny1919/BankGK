@@ -47,9 +47,17 @@ exports.handler = async (event) => {
   try {
     await transporter.sendMail(mailOptions);
     console.log("Mail gesendet!");
-    return { statusCode: 200, body: "OK" };
+    return {
+      statusCode: 200,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: "OK" }),
+    };
   } catch (err) {
     console.error("Fehler beim Senden der Mail:", err);
-    return { statusCode: 500, body: "Mail konnte nicht gesendet werden" };
+    return {
+      statusCode: 500,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ error: "Mail konnte nicht gesendet werden" }),
+    };
   }
 };
