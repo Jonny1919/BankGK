@@ -1,51 +1,50 @@
-const cloudName = "df5pxld68";
-const uploadPreset = "anonymous_upload";
+const FormData = require("form-data");
+const fetch = require("node-fetch");
 
-document.getElementById("uploadBtn").addEventListener("click", async () => {
-  const fileInput = document.getElementById("fileInput");
-  if (!fileInput.files.length) return alert("Bitte eine Datei auswählen.");
+exports.handler = async (event) => {
+  if (event.httpMethod !== "POST") {
+    return { statusCode: 405, body: "Method Not Allowed" };
+  }
 
-  const file = fileInput.files[0];
-  const url = `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`;
+  const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+  const uploadPreset = process.env.CLOUDINARY_UPLOAD_PRESET;
 
-  const formData = new FormData();
-  formData.append("file", file);
-  formData.append("upload_preset", uploadPreset);
-  formData.append("folder", "Galerie");
+  try {
+    // FormData mit dem Bild (Base64 oder Blob) vom Frontend empfangen
+    const { imageBase64 } = JSON.parse(event.body);
 
-  const progress = document.querySelector(".progress");
-  const progressBar = document.getElementById("progressBar");
-  progress.classList.remove("d-none");
-
-  const xhr = new XMLHttpRequest();
-  xhr.open("POST", url);
-  xhr.upload.onprogress = (event) => {
-    if (event.lengthComputable) {
-      const percent = Math.round((event.loaded / event.total) * 100);
-      progressBar.style.width = percent + "%";
-      progressBar.textContent = percent + "%";
+    if (!imageBase64) {
+      return { statusCode: 400, body: "Kein Bild erhalten" };
     }
-  };
-  xhr.onload = async () => {
-    progressBar.style.width = "100%";
-    progressBar.textContent = "100%";
-    setTimeout(() => progress.classList.add("d-none"), 1000);
-    fileInput.value = "";
-    await fetchImages();
-  };
-  xhr.send(formData);
-});
 
-async function fetchImages() {
-  const res = await fetch("/.netlify/functions/get-images");
-  const images = await res.json();
-  const gallery = document.getElementById("gallery");
-  gallery.innerHTML = "";
-  images.reverse().forEach(url => {
-    const img = document.createElement("img");
-    img.src = url;
-    gallery.appendChild(img);
-  });
-}
+    const form = new FormData();
+    form.append("file", imageBase64);
+    form.append("upload_preset", uploadPreset);
+    form.append("folder", "Galerie");
 
-window.onload = fetchImages;
+    const res = await fetch(
+      `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+      {
+        method: "POST",
+        body: form,
+      }
+    );
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      return {
+        statusCode: res.status,
+        body: JSON.stringify({ error: data.error.message || "Upload-Fehler" }),
+      };
+    }
+
+    return {
+      statusCode: 200,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url: data.secure_url }),
+    };
+  } catch (err) {
+    return { statusCode: 500, body: JSON.stringify({ error: err.toString() }) };
+  }
+};
