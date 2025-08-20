@@ -31,3 +31,4 @@ exports.handler = async (event) => {
     return { statusCode: 500, body: `Fehler: ${err.message}` };
   }
 };
+
