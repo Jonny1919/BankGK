@@ -12,6 +12,8 @@ exports.handler = async (event) => {
   try {
     // Bild Base64 + Dateiname aus dem Frontend auslesen
     const { imageBase64, filename } = JSON.parse(event.body);
+    console.log("Event Body:", event.body);
+    console.log("Received Base64 length:", imageBase64?.length);
 
     if (!imageBase64 || !filename) {
       return { statusCode: 400, body: "Missing image data or filename" };
