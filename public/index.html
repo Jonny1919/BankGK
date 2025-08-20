@@ -147,56 +147,57 @@ async function uploadImage() {
 
   status.innerText = "Komprimiere Bild...";
 
-  try {
-    // Bild komprimieren
-    const options = {
-      maxSizeMB: 2,              // max 2 MB
-      maxWidthOrHeight: 1920,    // skaliert runter
-      useWebWorker: true,
-    };
-    const compressedFile = await imageCompression(file, options);
+  // Bild einlesen und in Canvas rendern
+  const img = new Image();
+  const reader = new FileReader();
 
-    console.log("Original:", (file.size / 1024 / 1024).toFixed(2), "MB");
-    console.log("Komprimiert:", (compressedFile.size / 1024 / 1024).toFixed(2), "MB");
+  reader.onload = function (e) {
+    img.src = e.target.result;
+  };
 
-    status.innerText = "Lade hoch...";
+  img.onload = async function () {
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
 
-    // Base64 aus komprimierter Datei
-    const reader = new FileReader();
-    reader.onload = async function () {
-      const base64 = reader.result.split(",")[1];
+    // Bildgröße beibehalten, nur Kompression
+    canvas.width = img.width;
+    canvas.height = img.height;
+    ctx.drawImage(img, 0, 0);
 
-      try {
-        console.log("Upload-Payload:", { imageBase64: base64, filename: compressedFile.name });
+    // Kompression (JPEG = Qualität 0.7, PNG = keine Qualität)
+    const quality = 0.7; 
+    const mimeType = file.type === "image/png" ? "image/png" : "image/jpeg";
+    const compressedDataUrl = canvas.toDataURL(mimeType, quality);
 
-        const res = await fetch("/.netlify/functions/upload-image", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            imageBase64: base64,
-            filename: compressedFile.name
-          })
-        });
+    const base64 = compressedDataUrl.split(",")[1];
 
-        const data = await res.json();
+    try {
+      status.innerText = "Lade hoch...";
 
-        if (res.ok) {
-          status.innerText = "✅ Upload erfolgreich!";
-          input.value = "";
-          loadGallery();
-        } else {
-          status.innerText = "❌ Upload fehlgeschlagen: " + (data.error || "Unbekannter Fehler");
-        }
-      } catch (err) {
-        status.innerText = "Fehler beim Upload: " + err.message;
+      const res = await fetch("/.netlify/functions/upload-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          imageBase64: base64,
+          filename: file.name
+        })
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        status.innerText = "Upload erfolgreich!";
+        input.value = "";
+        loadGallery();
+      } else {
+        status.innerText = "Upload fehlgeschlagen: " + (data.error || "Unbekannter Fehler");
       }
-    };
-    reader.readAsDataURL(compressedFile);
+    } catch (err) {
+      status.innerText = "Fehler beim Upload: " + err.message;
+    }
+  };
 
-  } catch (err) {
-    console.error("Kompression fehlgeschlagen:", err);
-    status.innerText = "Fehler bei der Bildkompression.";
-  }
+  reader.readAsDataURL(file);
 }
 
 
