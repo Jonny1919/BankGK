@@ -97,6 +97,9 @@
     <img id="lightboxImg" src="" alt="Großansicht" />
   </div>
 
+  <!-- 📦 Image Compression Library -->
+  <script src="https://unpkg.com/browser-image-compression/dist/browser-image-compression.js"></script>
+
   <script>
 async function loadGallery() {
   const gallery = document.getElementById("gallery");
@@ -142,39 +145,58 @@ async function uploadImage() {
     return;
   }
 
-  status.innerText = "Lade hoch...";
+  status.innerText = "Komprimiere Bild...";
 
-  const reader = new FileReader();
-  reader.onload = async function () {
-    const base64 = reader.result;
+  try {
+    // Bild komprimieren
+    const options = {
+      maxSizeMB: 2,              // max 2 MB
+      maxWidthOrHeight: 1920,    // skaliert runter
+      useWebWorker: true,
+    };
+    const compressedFile = await imageCompression(file, options);
 
-    try {
-      console.log("Upload-Payload:", { imageBase64: base64.split(",")[1], filename: file.name });
+    console.log("Original:", (file.size / 1024 / 1024).toFixed(2), "MB");
+    console.log("Komprimiert:", (compressedFile.size / 1024 / 1024).toFixed(2), "MB");
 
-      const res = await fetch("/.netlify/functions/upload-image", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          imageBase64: base64.split(",")[1],
-          filename: file.name
-        })
-      });
+    status.innerText = "Lade hoch...";
 
-      const data = await res.json();
+    // Base64 aus komprimierter Datei
+    const reader = new FileReader();
+    reader.onload = async function () {
+      const base64 = reader.result.split(",")[1];
 
-      if (res.ok) {
-        status.innerText = "Upload erfolgreich!";
-        input.value = "";
-        loadGallery();
-      } else {
-        status.innerText = "Upload fehlgeschlagen: " + (data.error || "Unbekannter Fehler");
+      try {
+        console.log("Upload-Payload:", { imageBase64: base64, filename: compressedFile.name });
+
+        const res = await fetch("/.netlify/functions/upload-image", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            imageBase64: base64,
+            filename: compressedFile.name
+          })
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          status.innerText = "✅ Upload erfolgreich!";
+          input.value = "";
+          loadGallery();
+        } else {
+          status.innerText = "❌ Upload fehlgeschlagen: " + (data.error || "Unbekannter Fehler");
+        }
+      } catch (err) {
+        status.innerText = "Fehler beim Upload: " + err.message;
       }
-    } catch (err) {
-      status.innerText = "Fehler beim Upload: " + err.message;
-    }
-  };
+    };
+    reader.readAsDataURL(compressedFile);
 
-  reader.readAsDataURL(file);
+  } catch (err) {
+    console.error("Kompression fehlgeschlagen:", err);
+    status.innerText = "Fehler bei der Bildkompression.";
+  }
 }
 
 
