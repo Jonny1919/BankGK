@@ -1,59 +1,54 @@
-async function uploadImage() {
-  const input = document.getElementById("fileInput");
-  const status = document.getElementById("uploadStatus");
+// netlify/functions/upload-image.js
+const cloudinary = require('cloudinary').v2;
 
-  if (!input.files.length) {
-    status.innerText = "Bitte erst eine Datei auswählen.";
-    return;
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+exports.handler = async function(event, context) {
+  console.log("Function aufgerufen!");
+
+  if (event.httpMethod !== "POST") {
+    return {
+      statusCode: 405,
+      body: JSON.stringify({ error: "Nur POST erlaubt" }),
+    };
   }
 
-  const file = input.files[0];
-  status.innerText = "Lade hoch...";
+  try {
+    const { imageBase64, filename } = JSON.parse(event.body || "{}");
 
-  const reader = new FileReader();
-  reader.onload = async function () {
-    const result = reader.result;
-
-    if (!result || !result.startsWith("data:image/")) {
-      status.innerText = "Fehler: Ungültiges Bildformat.";
-      return;
+    if (!imageBase64 || !filename) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ error: "Keine Bilddaten oder Dateiname" }),
+      };
     }
 
-    // Base64 sauber extrahieren
-    const base64 = result.split(",")[1];
-    if (!base64) {
-      status.innerText = "Fehler: Konnte Base64-Daten nicht extrahieren.";
-      return;
-    }
+    console.log("Upload startet für Datei:", filename);
 
-    const payload = {
-      imageBase64: base64,
-      filename: file.name || "unnamed.png"
-    };
-
-    console.log("Upload-Payload:", payload); // zum Debuggen
-
-    try {
-      const res = await fetch("/.netlify/functions/upload-image", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-
-      const data = await res.json();
-      console.log("Server Response:", data);
-
-      if (res.ok) {
-        status.innerText = "Upload erfolgreich!";
-        input.value = "";
-        loadGallery();
-      } else {
-        status.innerText = "Upload fehlgeschlagen: " + (data.error || JSON.stringify(data));
+    const uploadResponse = await cloudinary.uploader.upload(
+      `data:image/jpeg;base64,${imageBase64}`,
+      {
+        folder: "Galerie", // Dein Cloudinary-Ordner
+        public_id: filename.replace(/\.[^/.]+$/, ""), // ohne Extension
+        overwrite: true,
       }
-    } catch (err) {
-      status.innerText = "Fehler beim Upload: " + err.message;
-    }
-  };
+    );
 
-  reader.readAsDataURL(file);
-}
+    console.log("Upload erfolgreich:", uploadResponse.secure_url);
+
+    return {
+      statusCode: 200,
+      body: JSON.stringify({ url: uploadResponse.secure_url }),
+    };
+  } catch (err) {
+    console.error("Fehler beim Upload:", err);
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: err.message }),
+    };
+  }
+};
