@@ -156,8 +156,9 @@ async function uploadImage() {
       const res = await fetch("/.netlify/functions/upload-image", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-        imageBase64: base64.split(",")[1], // nur der reine Base64-Teil
+         body: JSON.stringify({
+        imageBase64: base64.split(",")[1],
+        filename: file.name
       })
       });
 
