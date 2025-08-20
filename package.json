@@ -7,7 +7,7 @@
   "dependencies": {
     "form-data": "^4.0.0",
     "node-fetch": "^2.6.7",
-    "nodemailer": "^6.10.1"
+    "nodemailer": "^6.10.1",
     "cloudinary": "^1.38.0"
   },
   "author": "",
