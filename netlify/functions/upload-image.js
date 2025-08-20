@@ -1,42 +1,37 @@
-const FormData = require("form-data");
 const fetch = require("node-fetch");
+const FormData = require("form-data");
 
 exports.handler = async (event) => {
-  if (event.httpMethod !== "POST") {
-    return { statusCode: 405, body: "Method Not Allowed" };
-  }
-
-  const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
-  const uploadPreset = process.env.CLOUDINARY_UPLOAD_PRESET;
-
   try {
-    // FormData mit dem Bild (Base64 oder Blob) vom Frontend empfangen
-    const { imageBase64 } = JSON.parse(event.body);
-
-    if (!imageBase64) {
-      return { statusCode: 400, body: "Kein Bild erhalten" };
+    // Nur POST erlauben
+    if (event.httpMethod !== "POST") {
+      return { statusCode: 405, body: "Method Not Allowed" };
     }
 
-    const form = new FormData();
-    form.append("file", imageBase64);
-    form.append("upload_preset", uploadPreset);
-    form.append("folder", "Galerie");
+    const body = JSON.parse(event.body); // Hier erwarten wir { image: "data:image/..." }
+    if (!body || !body.image) {
+      return { statusCode: 400, body: JSON.stringify({ error: "No image provided" }) };
+    }
+
+    const imageData = body.image;
+
+    const formData = new FormData();
+    formData.append("file", imageData);
+    formData.append("upload_preset", process.env.CLOUDINARY_UPLOAD_PRESET);
+    formData.append("folder", "Galerie");
 
     const res = await fetch(
-      `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+      `https://api.cloudinary.com/v1_1/${process.env.CLOUDINARY_CLOUD_NAME}/image/upload`,
       {
         method: "POST",
-        body: form,
+        body: formData,
       }
     );
 
     const data = await res.json();
 
     if (!res.ok) {
-      return {
-        statusCode: res.status,
-        body: JSON.stringify({ error: data.error.message || "Upload-Fehler" }),
-      };
+      return { statusCode: res.status, body: JSON.stringify({ error: data }) };
     }
 
     return {
@@ -45,6 +40,7 @@ exports.handler = async (event) => {
       body: JSON.stringify({ url: data.secure_url }),
     };
   } catch (err) {
-    return { statusCode: 500, body: JSON.stringify({ error: err.toString() }) };
+    console.error("Upload error:", err);
+    return { statusCode: 500, body: JSON.stringify({ error: err.message }) };
   }
 };
