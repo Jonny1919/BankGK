@@ -4,6 +4,7 @@ const nodemailer = require("nodemailer");
 
 exports.handler = async (event) => {
   try {
+    // Prüfen, ob ein Bild gesendet wurde
     if (!event.body) {
       return {
         statusCode: 400,
@@ -11,10 +12,9 @@ exports.handler = async (event) => {
       };
     }
 
-    // Event Body parsen
-    let parsed;
+    let parsedBody;
     try {
-      parsed = JSON.parse(event.body);
+      parsedBody = JSON.parse(event.body);
     } catch (err) {
       return {
         statusCode: 400,
@@ -22,7 +22,7 @@ exports.handler = async (event) => {
       };
     }
 
-    const { imageBase64, filename } = parsed;
+    const { imageBase64, filename } = parsedBody;
 
     if (!imageBase64 || !filename) {
       return {
@@ -31,33 +31,33 @@ exports.handler = async (event) => {
       };
     }
 
-    // Cloudinary Daten
+    // Cloudinary-Variablen
     const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
     const uploadPreset = process.env.CLOUDINARY_UPLOAD_PRESET;
 
     const form = new FormData();
-    form.append("file", `data:image/jpeg;base64,${imageBase64}`);
+    const ext = filename.split(".").pop().toLowerCase();
+    form.append("file", `data:image/${ext};base64,${imageBase64}`);
     form.append("upload_preset", uploadPreset);
     form.append("folder", "Galerie");
     form.append("public_id", filename.replace(/\.[^/.]+$/, ""));
 
-    // Cloudinary Upload
+    // Upload zu Cloudinary
     const cloudRes = await fetch(
       `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
       { method: "POST", body: form }
     );
 
     const text = await cloudRes.text();
-    console.log("Cloudinary Response Status:", cloudRes.status);
     console.log("Cloudinary Response Text:", text);
 
     let cloudData;
     try {
       cloudData = JSON.parse(text);
-    } catch (err) {
+    } catch {
       return {
-        statusCode: cloudRes.status,
-        body: JSON.stringify({ error: "Cloudinary returned non-JSON", text }),
+        statusCode: 500,
+        body: JSON.stringify({ error: "Cloudinary returned invalid JSON", raw: text }),
       };
     }
 
@@ -79,7 +79,7 @@ exports.handler = async (event) => {
       },
     });
 
-    // Mail senden (async, Fehler nur loggen)
+    // E-Mail verschicken (async, Fehler nur loggen)
     transporter.sendMail({
       from: `"Galerie Upload" <${process.env.EMAIL_USER}>`,
       to: process.env.EMAIL_USER,
@@ -87,6 +87,7 @@ exports.handler = async (event) => {
       text: `Es wurde ein neues Bild hochgeladen: ${cloudData.secure_url}`,
     }).catch((err) => console.error("Email send error:", err));
 
+    // Antwort an Frontend
     return {
       statusCode: 200,
       headers: { "Content-Type": "application/json" },
@@ -96,7 +97,7 @@ exports.handler = async (event) => {
       }),
     };
   } catch (err) {
-    console.error("Unexpected error:", err);
+    console.error("Unhandled error:", err);
     return {
       statusCode: 500,
       body: JSON.stringify({ error: err.message }),
