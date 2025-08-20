@@ -25,6 +25,22 @@ exports.handler = async (event) => {
 
   console.log("Geparster Payload:", payload);
 
+  // Timestamp in deutscher Lokalzeit formatieren
+  let localTimestamp = payload.timestamp ? new Date(payload.timestamp) : new Date();
+  const formattedTime = localTimestamp.toLocaleString("de-DE", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+    timeZone: "Europe/Berlin",
+  });
+
+  // Mail-Text zusammenbauen
+  const mailText = `Ein neues Bild wurde hochgeladen!\n\nTimestamp (MEZ/MESZ): ${formattedTime}\n\nDetails:\n${JSON.stringify(payload, null, 2)}`;
+
   // Mail-Transporter (Web.de)
   const transporter = nodemailer.createTransport({
     host: "smtp.web.de",
@@ -41,7 +57,7 @@ exports.handler = async (event) => {
     from: process.env.EMAIL_USER,
     to: process.env.EMAIL_USER, // an dich selbst, kann andere E-Mail sein
     subject: "Neues Bild in der Galerie",
-    text: `Ein neues Bild wurde hochgeladen!\n\nDetails: ${JSON.stringify(payload, null, 2)}`,
+    text: mailText,
   };
 
   try {
