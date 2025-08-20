@@ -1,5 +1,5 @@
 // netlify/functions/upload-image.js
-const cloudinary = require('cloudinary').v2;
+const cloudinary = require("cloudinary").v2;
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -7,45 +7,35 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-exports.handler = async function(event, context) {
-  console.log("Function aufgerufen!");
-
-  if (event.httpMethod !== "POST") {
-    return {
-      statusCode: 405,
-      body: JSON.stringify({ error: "Nur POST erlaubt" }),
-    };
-  }
-
+exports.handler = async function(event) {
   try {
-    const { imageBase64, filename } = JSON.parse(event.body || "{}");
-
-    if (!imageBase64 || !filename) {
+    const body = JSON.parse(event.body || "{}");
+    if (!body.imageBase64 || !body.filename) {
       return {
         statusCode: 400,
-        body: JSON.stringify({ error: "Keine Bilddaten oder Dateiname" }),
+        body: JSON.stringify({ error: "Fehlende imageBase64 oder filename" }),
       };
     }
 
-    console.log("Upload startet für Datei:", filename);
+    // Debug-Log
+    console.log("Function Payload:", body);
 
-    const uploadResponse = await cloudinary.uploader.upload(
-      `data:image/jpeg;base64,${imageBase64}`,
+    const uploadResult = await cloudinary.uploader.upload(
+      `data:image/jpeg;base64,${body.imageBase64}`,
       {
-        folder: "Galerie", // Dein Cloudinary-Ordner
-        public_id: filename.replace(/\.[^/.]+$/, ""), // ohne Extension
-        overwrite: true,
+        folder: "Galerie",
+        public_id: body.filename.replace(/\.[^/.]+$/, ""), // ohne Dateiendung
       }
     );
 
-    console.log("Upload erfolgreich:", uploadResponse.secure_url);
+    console.log("Cloudinary Result:", uploadResult);
 
     return {
       statusCode: 200,
-      body: JSON.stringify({ url: uploadResponse.secure_url }),
+      body: JSON.stringify({ url: uploadResult.secure_url }),
     };
   } catch (err) {
-    console.error("Fehler beim Upload:", err);
+    console.error("Upload Error:", err);
     return {
       statusCode: 500,
       body: JSON.stringify({ error: err.message }),
