@@ -21,12 +21,8 @@
       column-gap: 0;
       padding: 10px;
     }
-    @media (max-width: 900px) {
-      .gallery { column-count: 2; }
-    }
-    @media (max-width: 600px) {
-      .gallery { column-count: 1; }
-    }
+    @media (max-width: 900px) { .gallery { column-count: 2; } }
+    @media (max-width: 600px) { .gallery { column-count: 1; } }
     .gallery img {
       width: 100% !important;
       height: auto;
@@ -36,9 +32,7 @@
       transition: transform 0.3s ease;
       display: block;
     }
-    .gallery img:hover {
-      transform: scale(1.03);
-    }
+    .gallery img:hover { transform: scale(1.03); }
 
     /* Lightbox */
     .lightbox {
@@ -51,10 +45,7 @@
       justify-content: center;
       z-index: 9999;
     }
-    .lightbox img {
-      max-width: 90%;
-      max-height: 90%;
-    }
+    .lightbox img { max-width: 90%; max-height: 90%; }
     .lightbox .close {
       position: absolute;
       top: 20px;
@@ -84,9 +75,7 @@
       border-radius: 5px;
       cursor: pointer;
     }
-    button:hover {
-      background: #0056b3;
-    }
+    button:hover { background: #0056b3; }
   </style>
 </head>
 <body>
@@ -150,16 +139,13 @@ async function uploadImage() {
 
   const reader = new FileReader();
   reader.onload = async function () {
-    const base64 = reader.result;
+    const base64 = reader.result.split(",")[1]; // nur Base64
 
     try {
       const res = await fetch("/.netlify/functions/upload-image", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-         body: JSON.stringify({
-        imageBase64: base64.split(",")[1],
-        filename: file.name
-      })
+        body: JSON.stringify({ imageBase64: base64, filename: file.name })
       });
 
       const data = await res.json();
@@ -167,7 +153,7 @@ async function uploadImage() {
       if (res.ok) {
         status.innerText = "Upload erfolgreich!";
         input.value = "";
-        loadGallery();
+        loadGallery(); // Galerie sofort aktualisieren
       } else {
         status.innerText = "Upload fehlgeschlagen: " + (data.error || "Unbekannter Fehler");
       }
@@ -177,7 +163,7 @@ async function uploadImage() {
   };
 
   reader.readAsDataURL(file);
-} // <-- Funktion jetzt korrekt geschlossen
+}
 
 // Lightbox Funktionen
 function openLightbox(url) {
@@ -191,12 +177,8 @@ function closeLightbox() {
 }
 
 document.querySelector(".close").addEventListener("click", closeLightbox);
-document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape") closeLightbox();
-});
-document.getElementById("lightbox").addEventListener("click", (e) => {
-  if (e.target.id === "lightbox") closeLightbox();
-});
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeLightbox(); });
+document.getElementById("lightbox").addEventListener("click", (e) => { if (e.target.id === "lightbox") closeLightbox(); });
 
 document.getElementById("uploadBtn").addEventListener("click", uploadImage);
 
