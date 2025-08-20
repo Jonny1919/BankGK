@@ -7,3 +7,4 @@ export async function handler(event, context) {
     body: JSON.stringify({ message: "Function erreicht!" })
   };
 }
+
