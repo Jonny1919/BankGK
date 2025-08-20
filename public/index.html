@@ -157,9 +157,8 @@ async function uploadImage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          imageBase64: base64.split(",")[1], // nur Base64 ohne data:image/...
-          filename: file.name
-        }),
+        imageBase64: base64.split(",")[1], // nur der reine Base64-Teil
+      })
       });
 
       const data = await res.json();
