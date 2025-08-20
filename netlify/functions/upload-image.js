@@ -1,12 +1,9 @@
 const fetch = require("node-fetch");
 const FormData = require("form-data");
-const nodemailer = require("nodemailer");
 
 exports.handler = async (event) => {
   try {
-    // Direkt loggen, was ankommt
-    console.log("Event body:", event.body);
-
+    // Prüfen, ob ein Bild gesendet wurde
     if (!event.body) {
       return {
         statusCode: 400,
@@ -14,10 +11,9 @@ exports.handler = async (event) => {
       };
     }
 
-    // Body parsen
-    let bodyData;
+    let parsedBody;
     try {
-      bodyData = JSON.parse(event.body);
+      parsedBody = JSON.parse(event.body);
     } catch (err) {
       return {
         statusCode: 400,
@@ -25,7 +21,7 @@ exports.handler = async (event) => {
       };
     }
 
-    const { imageBase64, filename } = bodyData;
+    const { imageBase64, filename } = parsedBody;
 
     if (!imageBase64 || !filename) {
       return {
@@ -39,11 +35,12 @@ exports.handler = async (event) => {
     const uploadPreset = process.env.CLOUDINARY_UPLOAD_PRESET;
 
     const form = new FormData();
-    form.append("file", `data:image/${filename.split(".").pop()};base64,${imageBase64}`);
+    form.append("file", `data:image/jpeg;base64,${imageBase64}`);
     form.append("upload_preset", uploadPreset);
     form.append("folder", "Galerie");
     form.append("public_id", filename.replace(/\.[^/.]+$/, "")); // Dateiendung entfernen
 
+    // Upload zu Cloudinary
     const cloudRes = await fetch(
       `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
       { method: "POST", body: form }
@@ -58,25 +55,7 @@ exports.handler = async (event) => {
       };
     }
 
-    // E-Mail Setup
-    const transporter = nodemailer.createTransport({
-      host: "smtp.web.de",
-      port: 465,
-      secure: true,
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-    });
-
-    await transporter.sendMail({
-      from: `"Galerie Upload" <${process.env.EMAIL_USER}>`,
-      to: process.env.EMAIL_USER,
-      subject: "Neues Bild hochgeladen",
-      text: `Es wurde ein neues Bild hochgeladen: ${cloudData.secure_url}`,
-    });
-
-    // Erfolg zurückgeben
+    // Antwort an Frontend
     return {
       statusCode: 200,
       headers: { "Content-Type": "application/json" },
@@ -86,7 +65,7 @@ exports.handler = async (event) => {
       }),
     };
   } catch (err) {
-    console.error("Upload Function Error:", err);
+    console.error("Upload Error:", err);
     return {
       statusCode: 500,
       body: JSON.stringify({ error: err.message }),
