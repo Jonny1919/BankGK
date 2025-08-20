@@ -4,7 +4,6 @@ const nodemailer = require("nodemailer");
 
 exports.handler = async (event) => {
   try {
-    // Prüfen, ob Body existiert
     if (!event.body) {
       return {
         statusCode: 400,
@@ -12,8 +11,18 @@ exports.handler = async (event) => {
       };
     }
 
-    // Body parsen
-    const { imageBase64, filename } = JSON.parse(event.body);
+    // Event Body parsen
+    let parsed;
+    try {
+      parsed = JSON.parse(event.body);
+    } catch (err) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ error: "Invalid JSON body" }),
+      };
+    }
+
+    const { imageBase64, filename } = parsed;
 
     if (!imageBase64 || !filename) {
       return {
@@ -22,7 +31,7 @@ exports.handler = async (event) => {
       };
     }
 
-    // Cloudinary Variablen
+    // Cloudinary Daten
     const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
     const uploadPreset = process.env.CLOUDINARY_UPLOAD_PRESET;
 
@@ -32,12 +41,25 @@ exports.handler = async (event) => {
     form.append("folder", "Galerie");
     form.append("public_id", filename.replace(/\.[^/.]+$/, ""));
 
+    // Cloudinary Upload
     const cloudRes = await fetch(
       `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
       { method: "POST", body: form }
     );
 
-    const cloudData = await cloudRes.json();
+    const text = await cloudRes.text();
+    console.log("Cloudinary Response Status:", cloudRes.status);
+    console.log("Cloudinary Response Text:", text);
+
+    let cloudData;
+    try {
+      cloudData = JSON.parse(text);
+    } catch (err) {
+      return {
+        statusCode: cloudRes.status,
+        body: JSON.stringify({ error: "Cloudinary returned non-JSON", text }),
+      };
+    }
 
     if (!cloudRes.ok) {
       return {
@@ -46,7 +68,7 @@ exports.handler = async (event) => {
       };
     }
 
-    // Nodemailer Setup (Web.de)
+    // Nodemailer Setup
     const transporter = nodemailer.createTransport({
       host: "smtp.web.de",
       port: 465,
@@ -57,7 +79,7 @@ exports.handler = async (event) => {
       },
     });
 
-    // E-Mail senden (async, Fehler nur loggen)
+    // Mail senden (async, Fehler nur loggen)
     transporter.sendMail({
       from: `"Galerie Upload" <${process.env.EMAIL_USER}>`,
       to: process.env.EMAIL_USER,
@@ -65,7 +87,6 @@ exports.handler = async (event) => {
       text: `Es wurde ein neues Bild hochgeladen: ${cloudData.secure_url}`,
     }).catch((err) => console.error("Email send error:", err));
 
-    // Antwort an Frontend
     return {
       statusCode: 200,
       headers: { "Content-Type": "application/json" },
@@ -75,7 +96,7 @@ exports.handler = async (event) => {
       }),
     };
   } catch (err) {
-    console.error(err);
+    console.error("Unexpected error:", err);
     return {
       statusCode: 500,
       body: JSON.stringify({ error: err.message }),
