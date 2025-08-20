@@ -10,6 +10,7 @@ cloudinary.config({
 exports.handler = async function(event) {
   try {
     const body = JSON.parse(event.body || "{}");
+
     if (!body.imageBase64 || !body.filename) {
       return {
         statusCode: 400,
@@ -19,17 +20,22 @@ exports.handler = async function(event) {
 
     console.log("Function Payload:", body);
 
-    // Dateityp dynamisch bestimmen
-    let mimeType = "image/jpeg";
-    if (body.filename.toLowerCase().endsWith(".png")) mimeType = "image/png";
+    // Dynamische Erkennung des MIME-Types
+    const ext = body.filename.split('.').pop().toLowerCase();
+    let mimeType;
+    if (ext === "png") mimeType = "image/png";
+    else if (ext === "jpg" || ext === "jpeg") mimeType = "image/jpeg";
+    else return {
+      statusCode: 400,
+      body: JSON.stringify({ error: "Nur JPG/JPEG und PNG erlaubt" }),
+    };
 
-    const uploadResult = await cloudinary.uploader.upload(
-      `data:${mimeType};base64,${body.imageBase64}`,
-      {
-        folder: "Galerie",
-        public_id: body.filename.replace(/\.[^/.]+$/, ""),
-      }
-    );
+    const dataUri = `data:${mimeType};base64,${body.imageBase64}`;
+
+    const uploadResult = await cloudinary.uploader.upload(dataUri, {
+      folder: "Galerie",
+      public_id: body.filename.replace(/\.[^/.]+$/, ""), // ohne Dateiendung
+    });
 
     console.log("Cloudinary Result:", uploadResult);
 
