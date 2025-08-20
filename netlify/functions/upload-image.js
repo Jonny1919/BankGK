@@ -1,5 +1,3 @@
-{ "imageBase64": "...", "filename": "bild.jpg" }
-
 const fetch = require("node-fetch");
 const FormData = require("form-data");
 const nodemailer = require("nodemailer");
