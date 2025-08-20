@@ -1,57 +1,51 @@
-const cloudinary = require('cloudinary').v2;
+const cloudName = "df5pxld68";
+const uploadPreset = "anonymous_upload";
 
-// Cloudinary Konfiguration aus Umgebungsvariablen
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
+document.getElementById("uploadBtn").addEventListener("click", async () => {
+  const fileInput = document.getElementById("fileInput");
+  if (!fileInput.files.length) return alert("Bitte eine Datei auswählen.");
+
+  const file = fileInput.files[0];
+  const url = `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`;
+
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("upload_preset", uploadPreset);
+  formData.append("folder", "Galerie");
+
+  const progress = document.querySelector(".progress");
+  const progressBar = document.getElementById("progressBar");
+  progress.classList.remove("d-none");
+
+  const xhr = new XMLHttpRequest();
+  xhr.open("POST", url);
+  xhr.upload.onprogress = (event) => {
+    if (event.lengthComputable) {
+      const percent = Math.round((event.loaded / event.total) * 100);
+      progressBar.style.width = percent + "%";
+      progressBar.textContent = percent + "%";
+    }
+  };
+  xhr.onload = async () => {
+    progressBar.style.width = "100%";
+    progressBar.textContent = "100%";
+    setTimeout(() => progress.classList.add("d-none"), 1000);
+    fileInput.value = "";
+    await fetchImages();
+  };
+  xhr.send(formData);
 });
 
-exports.handler = async function (event, context) {
-  try {
-    console.log("Event received:", event);
+async function fetchImages() {
+  const res = await fetch("/.netlify/functions/get-images");
+  const images = await res.json();
+  const gallery = document.getElementById("gallery");
+  gallery.innerHTML = "";
+  images.reverse().forEach(url => {
+    const img = document.createElement("img");
+    img.src = url;
+    gallery.appendChild(img);
+  });
+}
 
-    if (!event.body) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ error: "Kein Body erhalten" }),
-      };
-    }
-
-    // Body parsen
-    const { filename, imageBase64 } = JSON.parse(event.body);
-    console.log("Filename:", filename);
-    console.log("Base64 length:", imageBase64?.length);
-
-    if (!imageBase64) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ error: "Kein Bild Base64 enthalten" }),
-      };
-    }
-
-    // Bild hochladen
-    const uploadResponse = await cloudinary.uploader.upload(
-      `data:image/png;base64,${imageBase64}`, // Cloudinary braucht den Prefix
-      {
-        folder: "Galerie",
-        public_id: filename.replace(/\.[^/.]+$/, ""), // Dateiendung entfernen
-        overwrite: true,
-      }
-    );
-
-    console.log("Cloudinary Response:", uploadResponse);
-
-    return {
-      statusCode: 200,
-      body: JSON.stringify({ url: uploadResponse.secure_url }),
-    };
-
-  } catch (error) {
-    console.error("Fehler beim Upload:", error);
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: error.message }),
-    };
-  }
-};
+window.onload = fetchImages;
