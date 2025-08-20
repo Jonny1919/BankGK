@@ -1,4 +1,6 @@
 // netlify/functions/upload-image.js
+console.log("Upload Function aufgerufen");
+
 const cloudinary = require("cloudinary").v2;
 
 cloudinary.config({
