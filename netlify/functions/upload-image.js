@@ -17,14 +17,17 @@ exports.handler = async function(event) {
       };
     }
 
-    // Debug-Log
     console.log("Function Payload:", body);
 
+    // Dateityp dynamisch bestimmen
+    let mimeType = "image/jpeg";
+    if (body.filename.toLowerCase().endsWith(".png")) mimeType = "image/png";
+
     const uploadResult = await cloudinary.uploader.upload(
-      `data:image/jpeg;base64,${body.imageBase64}`,
+      `data:${mimeType};base64,${body.imageBase64}`,
       {
         folder: "Galerie",
-        public_id: body.filename.replace(/\.[^/.]+$/, ""), // ohne Dateiendung
+        public_id: body.filename.replace(/\.[^/.]+$/, ""),
       }
     );
 
