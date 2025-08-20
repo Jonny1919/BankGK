@@ -46,4 +46,23 @@ exports.handler = async (event) => {
     if (!res.ok) {
       return {
         statusCode: res.status,
-        headers: { "C
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ error: data.error?.message || "Upload-Fehler" }),
+      };
+    }
+
+    return {
+      statusCode: 200,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url: data.secure_url }),
+    };
+
+  } catch (err) {
+    console.error("Unexpected Error:", err);
+    return {
+      statusCode: 500,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ error: err.toString() }),
+    };
+  }
+};
