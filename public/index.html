@@ -148,36 +148,35 @@ async function uploadImage() {
   const file = input.files[0];
   status.innerText = "Lade hoch...";
 
-  const reader = new FileReader();
-  reader.onload = async function () {
-    const base64 = reader.result;
+const reader = new FileReader();
+reader.onload = async function () {
+  const base64 = reader.result;
 
-    try {
-      const res = await fetch("/.netlify/functions/upload-image", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          imageBase64: base64.split(",")[1], // nur Base64 ohne data:image/...
-          filename: file.name
-        }),
-      });
+  try {
+    const res = await fetch("/.netlify/functions/upload-image", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        imageBase64: base64,
+        filename: file.name
+      }),
+    });
 
-      const data = await res.json();
+    const data = await res.json();
 
-      if (res.ok) {
-        status.innerText = "Upload erfolgreich!";
-        input.value = "";
-        loadGallery();
-      } else {
-        status.innerText = "Upload fehlgeschlagen: " + (data.error || "Unbekannter Fehler");
-      }
-    } catch (err) {
-      status.innerText = "Fehler beim Upload: " + err.message;
+    if (res.ok) {
+      status.innerText = "Upload erfolgreich!";
+      input.value = "";
+      loadGallery();
+    } else {
+      status.innerText = "Upload fehlgeschlagen: " + (data.error || "Unbekannter Fehler");
     }
-  };
+  } catch (err) {
+    status.innerText = "Fehler beim Upload: " + err.message;
+  }
+};
 
-  reader.readAsDataURL(file);
-}
+reader.readAsDataURL(file);
     // Lightbox Funktionen
     function openLightbox(url) {
       const lightbox = document.getElementById("lightbox");
