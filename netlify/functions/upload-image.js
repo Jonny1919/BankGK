@@ -1,95 +1,60 @@
-<script>
-async function loadGallery() {
-  const gallery = document.getElementById("gallery");
-  gallery.innerHTML = "Lade Bilder...";
+const FormData = require("form-data");
+const fetch = require("node-fetch");
+
+exports.handler = async (event) => {
+  if (event.httpMethod !== "POST") {
+    return { statusCode: 405, body: JSON.stringify({ error: "Method Not Allowed" }) };
+  }
+
+  const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+  const uploadPreset = process.env.CLOUDINARY_UPLOAD_PRESET;
+
   try {
-    const res = await fetch("/.netlify/functions/get-cloudinary-images");
+    console.log("Event Body:", event.body);
+    const { imageBase64, filename } = JSON.parse(event.body);
+
+    if (!imageBase64) {
+      return { statusCode: 400, body: JSON.stringify({ error: "Kein Bild erhalten" }) };
+    }
+
+    console.log("Received Base64 length:", imageBase64.length);
+
+    const form = new FormData();
+    form.append("file", `data:image/jpeg;base64,${imageBase64}`);
+    form.append("upload_preset", uploadPreset);
+    form.append("folder", "Galerie");
+    if (filename) form.append("public_id", filename.replace(/\.[^/.]+$/, ""));
+
+    const res = await fetch(
+      `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+      {
+        method: "POST",
+        body: form,
+      }
+    );
+
     const data = await res.json();
 
-    gallery.innerHTML = "";
-
-    if (Array.isArray(data)) {
-      data.forEach(url => {
-        const image = document.createElement("img");
-        image.src = url;
-        image.loading = "lazy";
-        image.addEventListener("click", () => openLightbox(url));
-        gallery.appendChild(image);
-      });
-    } else if (data.error) {
-      gallery.innerText = "Fehler vom Server: " + data.error;
-    } else {
-      gallery.innerText = "Unerwartete Antwort vom Server.";
-    }
-  } catch (err) {
-    gallery.innerText = "Fehler beim Laden: " + err.message;
-  }
-}
-
-async function uploadImage() {
-  const input = document.getElementById("fileInput");
-  const status = document.getElementById("uploadStatus");
-
-  if (!input.files.length) {
-    status.innerText = "Bitte erst eine Datei auswählen.";
-    return;
-  }
-
-  const file = input.files[0];
-  status.innerText = "Lade hoch...";
-
-  const reader = new FileReader();
-  reader.onload = async function () {
-    const base64 = reader.result.split(",")[1]; // nur Base64 ohne data:image/...
-
-    try {
-      const res = await fetch("/.netlify/functions/upload-image", {
-        method: "POST",
+    if (!res.ok) {
+      console.error("Cloudinary Error:", data);
+      return {
+        statusCode: res.status,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageBase64: base64, filename: file.name }),
-      });
-
-      let data;
-      try {
-        data = await res.json();
-      } catch {
-        data = { error: "Keine JSON-Antwort vom Server" };
-      }
-
-      if (res.ok) {
-        status.innerText = "Upload erfolgreich!";
-        input.value = "";
-        loadGallery();
-      } else {
-        status.innerText = "Upload fehlgeschlagen: " + (data.error || "Unbekannter Fehler");
-      }
-    } catch (err) {
-      status.innerText = "Fehler beim Upload: " + err.message;
+        body: JSON.stringify({ error: data.error?.message || "Upload-Fehler" }),
+      };
     }
-  };
 
-  reader.readAsDataURL(file);
-}
-
-// Lightbox-Funktionen
-function openLightbox(url) {
-  const lightbox = document.getElementById("lightbox");
-  const lightboxImg = document.getElementById("lightboxImg");
-  lightboxImg.src = url;
-  lightbox.style.display = "flex";
-}
-function closeLightbox() {
-  document.getElementById("lightbox").style.display = "none";
-}
-
-// Event-Listener
-document.querySelector(".close").addEventListener("click", closeLightbox);
-document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeLightbox(); });
-document.getElementById("lightbox").addEventListener("click", (e) => {
-  if (e.target.id === "lightbox") closeLightbox();
-});
-document.getElementById("uploadBtn").addEventListener("click", uploadImage);
-
-// Initiale Galerie laden
-loadGallery();
-</script>
+    return {
+      statusCode: 200,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url: data.secure_url }),
+    };
+  } catch (err) {
+    console.error("Function Error:", err);
+    return {
+      statusCode: 500,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ error: err.toString() }),
+    };
+  }
+};
