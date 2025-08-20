@@ -3,39 +3,60 @@ const cloudinary = require("cloudinary").v2;
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
+  api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-exports.handler = async (event) => {
-  console.log("Event Body:", event.body);
+exports.handler = async function (event, context) {
+  console.log("Event received:", event);
 
   if (event.httpMethod !== "POST") {
-    return { statusCode: 405, body: "Method Not Allowed" };
+    return {
+      statusCode: 405,
+      body: JSON.stringify({ error: "Method not allowed" })
+    };
   }
 
+  let body;
   try {
-    const { imageBase64, filename } = JSON.parse(event.body);
-    console.log("Received Base64 length:", imageBase64?.length, "Filename:", filename);
+    body = JSON.parse(event.body);
+  } catch (err) {
+    console.error("Failed to parse JSON:", err);
+    return {
+      statusCode: 400,
+      body: JSON.stringify({ error: "Invalid JSON" })
+    };
+  }
 
-    if (!imageBase64) {
-      return { statusCode: 400, body: JSON.stringify({ error: "Kein Bild erhalten" }) };
-    }
+  const { imageBase64, filename } = body;
 
-    // Upload zu Cloudinary
+  if (!imageBase64 || !filename) {
+    return {
+      statusCode: 400,
+      body: JSON.stringify({ error: "Missing image data or filename" })
+    };
+  }
+
+  console.log("Received filename:", filename);
+  console.log("Base64 length:", imageBase64.length);
+
+  try {
     const result = await cloudinary.uploader.upload(`data:image/jpeg;base64,${imageBase64}`, {
       folder: "Galerie",
-      public_id: filename ? filename.split(".")[0] : undefined,
+      public_id: filename.split(".")[0],
+      overwrite: true
     });
 
-    console.log("Upload Result:", result);
+    console.log("Cloudinary upload result:", result);
 
     return {
       statusCode: 200,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url: result.secure_url }),
+      body: JSON.stringify({ message: "Upload erfolgreich", url: result.secure_url })
     };
   } catch (err) {
-    console.error("Upload Error:", err);
-    return { statusCode: 500, body: JSON.stringify({ error: err.message }) };
+    console.error("Cloudinary upload failed:", err);
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: "Cloudinary upload failed", details: err.message })
+    };
   }
 };
