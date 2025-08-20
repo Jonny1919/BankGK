@@ -1,62 +1,57 @@
-const cloudinary = require("cloudinary").v2;
+const cloudinary = require('cloudinary').v2;
 
+// Cloudinary Konfiguration aus Umgebungsvariablen
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET
+  api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
 exports.handler = async function (event, context) {
-  console.log("Event received:", event);
-
-  if (event.httpMethod !== "POST") {
-    return {
-      statusCode: 405,
-      body: JSON.stringify({ error: "Method not allowed" })
-    };
-  }
-
-  let body;
   try {
-    body = JSON.parse(event.body);
-  } catch (err) {
-    console.error("Failed to parse JSON:", err);
-    return {
-      statusCode: 400,
-      body: JSON.stringify({ error: "Invalid JSON" })
-    };
-  }
+    console.log("Event received:", event);
 
-  const { imageBase64, filename } = body;
+    if (!event.body) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ error: "Kein Body erhalten" }),
+      };
+    }
 
-  if (!imageBase64 || !filename) {
-    return {
-      statusCode: 400,
-      body: JSON.stringify({ error: "Missing image data or filename" })
-    };
-  }
+    // Body parsen
+    const { filename, imageBase64 } = JSON.parse(event.body);
+    console.log("Filename:", filename);
+    console.log("Base64 length:", imageBase64?.length);
 
-  console.log("Received filename:", filename);
-  console.log("Base64 length:", imageBase64.length);
+    if (!imageBase64) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ error: "Kein Bild Base64 enthalten" }),
+      };
+    }
 
-  try {
-    const result = await cloudinary.uploader.upload(`data:image/jpeg;base64,${imageBase64}`, {
-      folder: "Galerie",
-      public_id: filename.split(".")[0],
-      overwrite: true
-    });
+    // Bild hochladen
+    const uploadResponse = await cloudinary.uploader.upload(
+      `data:image/png;base64,${imageBase64}`, // Cloudinary braucht den Prefix
+      {
+        folder: "Galerie",
+        public_id: filename.replace(/\.[^/.]+$/, ""), // Dateiendung entfernen
+        overwrite: true,
+      }
+    );
 
-    console.log("Cloudinary upload result:", result);
+    console.log("Cloudinary Response:", uploadResponse);
 
     return {
       statusCode: 200,
-      body: JSON.stringify({ message: "Upload erfolgreich", url: result.secure_url })
+      body: JSON.stringify({ url: uploadResponse.secure_url }),
     };
-  } catch (err) {
-    console.error("Cloudinary upload failed:", err);
+
+  } catch (error) {
+    console.error("Fehler beim Upload:", error);
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: "Cloudinary upload failed", details: err.message })
+      body: JSON.stringify({ error: error.message }),
     };
   }
 };
